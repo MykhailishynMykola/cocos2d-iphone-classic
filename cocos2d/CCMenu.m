@@ -112,7 +112,7 @@ enum {
 		// XXX: in v0.7, winSize should return the visible size
 		// XXX: so the bar calculation should be done there
 #ifdef __CC_PLATFORM_IOS
-		CGRect r = [[UIApplication sharedApplication] statusBarFrame];
+		CGRect r = CGRectZero; // was [UIApplication statusBarFrame]: deprecated no-op on iOS 27 (returns zero); kept as zero to preserve centering
 		s.height -= r.size.height;
 #endif
 		self.position = ccp(s.width/2, s.height/2);

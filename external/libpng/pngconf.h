@@ -332,8 +332,12 @@
  * on non-Mac platforms.
  */
 #ifndef MACOS
+   /* NOTE: TARGET_OS_MAC is defined (==1) on ALL modern Apple platforms,
+    * including iOS, so it must NOT be used to detect *classic* Mac OS here.
+    * Leaving it in makes this ancient libpng try to #include <fp.h> (a Carbon
+    * header removed long ago), breaking the build. Dropped TARGET_OS_MAC. */
 #  if (defined(__MWERKS__) && defined(macintosh)) || defined(applec) || \
-      defined(THINK_C) || defined(__SC__) || defined(TARGET_OS_MAC)
+      defined(THINK_C) || defined(__SC__)
 #    define MACOS
 #  endif
 #endif
