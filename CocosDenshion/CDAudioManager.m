@@ -239,16 +239,33 @@ static tAudioManagerMode configuredMode;
 static BOOL configured = FALSE;
 
 -(BOOL) audioSessionSetActive:(BOOL) active {
-	NSError *activationError = nil;
-	if ([[AVAudioSession sharedInstance] setActive:active error:&activationError]) {
-		_audioSessionActive = active;
-		CDLOGINFO(@"Denshion::CDAudioManager - Audio session set active %i succeeded", active);
-		return YES;
-	} else {
-		//Failed
-		CDLOG(@"Denshion::CDAudioManager - Audio session set active %i failed with error %@", active, activationError);
-		return NO;
+	// AVAudioSession setActive: can block, which triggers the Thread Performance Checker's
+	// "AVAudioSession Hang Risk" when called on the main thread. When we're on the main thread,
+	// run the blocking call on a background queue (and update the flag optimistically); off the
+	// main thread, keep the original synchronous behaviour so callers still get the real result.
+	if (![NSThread isMainThread]) {
+		NSError *activationError = nil;
+		if ([[AVAudioSession sharedInstance] setActive:active error:&activationError]) {
+			_audioSessionActive = active;
+			CDLOGINFO(@"Denshion::CDAudioManager - Audio session set active %i succeeded", active);
+			return YES;
+		} else {
+			//Failed
+			CDLOG(@"Denshion::CDAudioManager - Audio session set active %i failed with error %@", active, activationError);
+			return NO;
+		}
 	}
+
+	_audioSessionActive = active;
+	dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+		NSError *activationError = nil;
+		if ([[AVAudioSession sharedInstance] setActive:active error:&activationError]) {
+			CDLOGINFO(@"Denshion::CDAudioManager - Audio session set active %i succeeded", active);
+		} else {
+			CDLOG(@"Denshion::CDAudioManager - Audio session set active %i failed with error %@", active, activationError);
+		}
+	});
+	return YES;
 }
 
 -(BOOL) audioSessionSetCategory:(NSString*) category {
